@@ -4,12 +4,9 @@ import play.Application;
 import play.Logger;
 import play.Mode;
 import play.inject.guice.GuiceApplicationBuilder;
-import play.libs.ws.WSAuthScheme;
-import play.libs.ws.WSClient;
 import play.test.WithApplication;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
+
 import com.google.common.collect.ImmutableMap;
 import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.ReturnListener;
@@ -20,7 +17,6 @@ import com.tetracom.play.transport.actions.IAMQPPublishAction;
 import com.tetracom.play.transport.actions.IAMQPSubscribeAction;
 import com.tetracom.play.transport.actions.IDeliveryHandler;
 import com.tetracom.play.transport.config.IAMQPComponentsProvider;
-import com.tetracom.play.transport.config.IAMQPExchange;
 import com.tetracom.play.transport.config.IAMQPQueue;
 import com.tetracom.play.transport.execution.IAMQPPublishTunnelConfig;
 import com.tetracom.play.transport.execution.IAMQPSubscribeTunnelConfig;
@@ -32,23 +28,16 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URISyntaxException;
-import java.net.URLEncoder;
+
 import java.nio.charset.StandardCharsets;
 
-import org.apache.http.client.utils.URIBuilder;
 import org.junit.Test;
 
-public class BasicPublishAndSubscribe extends WithApplication {
-
-	private static String API_HOST = "http://localhost:15672/api/";
+public class BasicPublishAndSubscribeTest extends WithApplication {
 
 	private static String result = "";
 
 	private static String result2 = "";
-
-	private static String result3 = "";
 
 	protected Application provideApplication() {
 
@@ -62,7 +51,7 @@ public class BasicPublishAndSubscribe extends WithApplication {
 	}
 
 	@Test
-	public void basicPublishAndSubscribe1on1() {
+	public void basicPublishAndSubscribe() {
 
 		Logger.info(
 				"================================== Testing basic publish and subscribe ===================================");
@@ -96,7 +85,7 @@ public class BasicPublishAndSubscribe extends WithApplication {
 					public boolean handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties,
 							byte[] body) throws Exception {
 
-						BasicPublishAndSubscribe.result = new String(body, StandardCharsets.UTF_8);
+						BasicPublishAndSubscribeTest.result = new String(body, StandardCharsets.UTF_8);
 
 						return true;
 
@@ -111,7 +100,7 @@ public class BasicPublishAndSubscribe extends WithApplication {
 
 		}
 
-		assertThat(BasicPublishAndSubscribe.result, equalTo(message));
+		assertThat(BasicPublishAndSubscribeTest.result, equalTo(message));
 
 	}
 
@@ -142,7 +131,7 @@ public class BasicPublishAndSubscribe extends WithApplication {
 			public void handleReturn(int replyCode, String replyText, String exchange, String routingKey,
 					BasicProperties properties, byte[] body) throws IOException {
 
-				BasicPublishAndSubscribe.result2 = new String(body, StandardCharsets.UTF_8);
+				BasicPublishAndSubscribeTest.result2 = new String(body, StandardCharsets.UTF_8);
 
 			}
 		});
@@ -156,144 +145,8 @@ public class BasicPublishAndSubscribe extends WithApplication {
 
 		}
 
-		assertThat(BasicPublishAndSubscribe.result2, equalTo(message));
+		assertThat(BasicPublishAndSubscribeTest.result2, equalTo(message));
 
-	}
-
-	@Test
-	public void testNoChannelHandler() {
-
-		Logger.info(
-				"================================= Testing sudden connection drop ===========================================");
-
-		final String message = "TEST";
-		final String message2 = "TEST2";
-
-		final IAMQPTransport transport = app.injector().instanceOf(IAMQPTransport.class);
-
-		//final IAMQPExchange wrongExchange = TestComponentsProvider.wrongExchange();
-		final IAMQPExchange wrongExchange = TestComponentsProvider.Exchanges.TEST_EXCHANGE_2;
-
-		final IAMQPPublishTunnelConfig pubConf = transport.configs().publish(wrongExchange);
-		final IAMQPPublishAction pubAct1 = transport.actions().publish(wrongExchange);
-		final IAMQPPublishAction pubAct2 = transport.actions().publish(wrongExchange);
-
-		pubAct1.message(message.getBytes(StandardCharsets.UTF_8));
-		pubAct2.message(message2.getBytes(StandardCharsets.UTF_8));
-		pubAct2.noChannelHandler((fail) -> {
-
-			Logger.debug("In no channel handler!");
-			BasicPublishAndSubscribe.result3 = new String(fail.messages().stream().findAny().get(),
-					StandardCharsets.UTF_8);
-
-		});
-
-		transport.executor().execute(pubConf);
-		transport.executor().execute(pubAct1);
-
-		//deleteAllConnections();
-		keepConnectionsClosed();
-		
-		transport.executor().execute(pubAct2);
-
-		try {
-			Thread.sleep(10000);
-		} catch (final Exception e) {
-
-		}
-
-		assertThat(BasicPublishAndSubscribe.result3, equalTo(message2));
-	}
-
-	private static boolean noConnections = true;
-
-	private void deleteAllConnections() {
-		final WSClient ws = app.injector().instanceOf(WSClient.class);
-
-		while (noConnections) {
-
-			ws.url(API_HOST + "connections").setAuth("radoslav", "rado123", WSAuthScheme.BASIC).get()
-					.thenApply(response -> response.asJson())
-					.whenComplete((js, ex) -> {
-
-						final ArrayNode names = (ArrayNode) js;
-						
-						Logger.info("names = {}", js);
-						
-						if (names.size() > 0) {
-
-							for (final JsonNode obj : names) {
-								try {
-									ws.url(API_HOST + "connections/" + URLEncoder.encode(obj.get("name").asText(), "UTF-8")).delete();
-								} catch (UnsupportedEncodingException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
-								Logger.debug("Deleting connection " + obj.get("name").asText());
-							}
-
-							noConnections = false;
-						}
-
-					});
-			
-			try {
-				Thread.sleep(500);
-			} catch (final Exception e) {
-
-			}
-
-		}
-
-	}
-	
-	private void keepConnectionsClosed() {
-		
-		final WSClient ws = app.injector().instanceOf(WSClient.class);
-		
-		final Runnable thread = new Runnable() {
-
-			@Override
-			public void run() {
-				
-				while(true) {
-					
-					ws.url(API_HOST + "connections").setAuth("radoslav", "rado123", WSAuthScheme.BASIC).get()
-					.thenApply(response -> response.asJson())
-					.whenComplete((js, ex) -> {
-
-						final ArrayNode names = (ArrayNode) js;
-						
-						Logger.info("names = {}", js);
-						
-						if (names.size() > 0) {
-
-							for (final JsonNode obj : names) {
-								try {
-									final String delUrl = new URIBuilder(API_HOST + "connections/" + obj.get("name").asText()).toString();
-									Logger.debug("url = {}", delUrl);
-									ws.url(delUrl).delete();
-								} catch (URISyntaxException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
-								
-								
-								Logger.debug("Deleting connection " + obj.get("name").asText());
-							}
-
-						}
-
-					});
-					
-					
-				}
-					
-			}
-			
-		};
-		
-		new Thread(thread).start();
 	}
 
 }

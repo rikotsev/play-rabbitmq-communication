@@ -3,6 +3,7 @@ package com.tetracom.play.transport.execution;
 import java.io.IOException;
 import java.util.Optional;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import com.google.inject.assistedinject.Assisted;
@@ -27,7 +28,7 @@ class AMQPSubscribeTunnel extends AAMQPChannelHandler<IAMQPSubscribeTunnelConfig
 
 	@Inject
 	public AMQPSubscribeTunnel(ApplicationLifecycle lifecycle, final IAMQPInitializer initializer,
-			final IAMQPComponentsProvider componentsProvider, @Assisted Connection connection,
+			final IAMQPComponentsProvider componentsProvider, @Assisted @Nullable Connection connection,
 			@Assisted Class<IAMQPSubscribeTunnelConfig> configType, @Assisted Class<IAMQPSubscribeAction> actionType) {
 		super(lifecycle, initializer, componentsProvider, connection, configType, actionType);
 	}
@@ -111,6 +112,7 @@ class AMQPSubscribeTunnel extends AAMQPChannelHandler<IAMQPSubscribeTunnelConfig
 				@Override
 				public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties,
 						byte[] body) throws IOException {
+					
 					try {
 						final boolean result = action.getDeliveryHandler().handleDelivery(consumerTag, envelope,
 								properties, body);
@@ -118,11 +120,11 @@ class AMQPSubscribeTunnel extends AAMQPChannelHandler<IAMQPSubscribeTunnelConfig
 						if (!autoAck && result) {
 							getChannel().basicAck(envelope.getDeliveryTag(), false);
 						} else {
-							Logger.warn("AMQP >> Handling for message failed, but autoAck is true!");
+							Logger.warn("AMQP >> Handling for message was no successful and autoAck is {}!", autoAck);
 						}
-
+						
 					} catch (final Exception e) {
-						Logger.error("AMQP >> Handling for message failed with exception and autoAck is = {} ", autoAck,
+						Logger.error("AMQP >> Handling for message failed with exception and autoAck is {} ", autoAck,
 								e);
 					}
 

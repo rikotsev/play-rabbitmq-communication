@@ -5,8 +5,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.util.Assert;
+
 import com.tetracom.play.transport.config.IAMQPExchange;
 import com.tetracom.play.transport.config.IAMQPQueue;
+
 
 class AMQPPublishAction implements IAMQPPublishAction {
 	
@@ -21,11 +24,20 @@ class AMQPPublishAction implements IAMQPPublishAction {
 	private INoChannelHandler noChannelHandler;
 	
 	public AMQPPublishAction(final IAMQPExchange exchange) {
+		
+		Assert.notNull(exchange,"A publish action without an exchange cannot be initialized!");
+		Assert.notNull(exchange.name(), "A publish action for an exchange without name cannot be initialized!");
+		
 		this.exchange = exchange;
 	}
 	
 	public AMQPPublishAction(final IAMQPExchange exchange, final IAMQPQueue queue) {
-		this.exchange = exchange;
+		this(exchange);
+		
+		if(queue != null) {
+			Assert.notNull(queue.name(), "Cannot publish to a queue via exchange without a routing key for the queue!");
+		}
+		
 		this.queue = queue;
 	}
 	

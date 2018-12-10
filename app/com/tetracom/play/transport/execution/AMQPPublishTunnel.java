@@ -3,6 +3,7 @@ package com.tetracom.play.transport.execution;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import org.apache.commons.lang3.StringUtils;
@@ -25,7 +26,7 @@ class AMQPPublishTunnel extends AAMQPChannelHandler<IAMQPPublishTunnelConfig, IA
 
 	@Inject
 	public AMQPPublishTunnel(ApplicationLifecycle lifecycle, IAMQPInitializer initializer,
-			IAMQPComponentsProvider componentsProvider, @Assisted Connection connection,
+			IAMQPComponentsProvider componentsProvider, @Assisted @Nullable Connection connection,
 			@Assisted Class<IAMQPPublishTunnelConfig> configType, @Assisted Class<IAMQPPublishAction> actionType) {
 		super(lifecycle, initializer, componentsProvider, connection, configType, actionType);
 	}

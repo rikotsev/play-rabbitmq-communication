@@ -22,7 +22,7 @@ class AMQPPublishTunnelConfig implements IAMQPPublishTunnelConfig {
 	}
 	
 	public AMQPPublishTunnelConfig(final IAMQPExchange exchange, final IAMQPQueue queue) {
-		this.exchange = exchange;
+		this(exchange);
 		this.queue = queue;
 	}
 	
