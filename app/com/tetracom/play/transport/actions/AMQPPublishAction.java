@@ -24,7 +24,7 @@ class AMQPPublishAction implements IAMQPPublishAction {
 	private INoChannelHandler noChannelHandler;
 	
 	public AMQPPublishAction(final IAMQPExchange exchange) {
-		
+		//Needed in order for the publish supervisor to redirect and for actions in the Publish Tunnel
 		Assert.notNull(exchange,"A publish action without an exchange cannot be initialized!");
 		Assert.notNull(exchange.name(), "A publish action for an exchange without name cannot be initialized!");
 		
@@ -35,7 +35,10 @@ class AMQPPublishAction implements IAMQPPublishAction {
 		this(exchange);
 		
 		if(queue != null) {
-			Assert.notNull(queue.name(), "Cannot publish to a queue via exchange without a routing key for the queue!");
+			//Needed in order for the publish supervisor to redirect
+			Assert.notNull(queue.name(), "Cannot publish to a queue via exchange with the queue having no name!");
+			//Needed for actions in the publish tunnel
+			Assert.notNull(queue.routingKey(), "Cannot publish to a queue via exchange without a routing key for the queue!");
 		}
 		
 		this.queue = queue;

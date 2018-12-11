@@ -15,9 +15,10 @@ class AMQPSubscribeAction implements IAMQPSubscribeAction {
 	private boolean autoAck;
 	
 	public AMQPSubscribeAction(final IAMQPQueue queue, final IDeliveryHandler handler) {
-		
+		//Needed in order for the subscribe supervisor to redirect and for actions in the subscribe tunnel
 		Assert.notNull(queue, "A subscribe action without a queue to subscribe to cannot be initialized!");
 		Assert.notNull(queue.name(), "A subscribe action with a queue without a name cannot be initialized!");
+		//Needed for actions in the subscribe tunnel
 		Assert.notNull(handler, "A subscribe action without a handler cannot be initialized!");
 		
 		this.queue = queue;
